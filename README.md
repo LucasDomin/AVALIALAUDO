@@ -1,68 +1,158 @@
-# 🚀 AvaliaPro - Avaliação de Imóveis (NBR 14653 & Chauvenet)
+# Studio4 — Creative Generator
 
-Este projeto foi desenvolvido utilizando **React**, **Vite**, e **Tailwind CSS**. Ele foi configurado para gerar um arquivo único (`Single HTML`), o que significa que o resultado final do build não precisa de internet ou de servidor para rodar!
-
-## 📦 Como Instalar e Rodar no seu Computador
-
-Se você baixou a pasta do projeto do GitHub e ela ficou em branco, é porque você precisa instalar as dependências antes de gerar a página final.
-
-Siga este passo a passo:
-
-### 1️⃣ Instalar o Node.js
-Se você ainda não tem o Node.js instalado no seu computador, baixe e instale a versão LTS recomendada do site oficial:
-🔗 [https://nodejs.org/](https://nodejs.org/)
+Sistema local para gerar criativos SVG + PNG com **edição por bloco clicável**, **background com efeitos** e **clones por país com tradução automática**.
 
 ---
 
-### 2️⃣ Abrir o Terminal na pasta do Projeto
-Abra o terminal (Prompt de Comando ou PowerShell no Windows, ou Terminal no Mac/Linux) e navegue até a pasta do projeto que você baixou.
+## Instalação rápida
 
-No Windows, você pode segurar a tecla `Shift` e clicar com o botão direito dentro da pasta do projeto, depois selecionar **"Abrir janela do PowerShell aqui"**.
-
----
-
-### 3️⃣ Instalar as dependências
-Com o terminal aberto na pasta do projeto, digite o seguinte comando e aperte **Enter**:
 ```bash
-npm install
+git clone https://github.com/SEU_USUARIO/studio4.git && cd studio4
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python app.py   # → http://localhost:5000
 ```
-Este comando vai baixar todas as bibliotecas necessárias para rodar o projeto.
 
----
-
-### 4️⃣ Rodar o projeto para teste
-Para ver o projeto funcionando em tempo real enquanto você edita, digite o seguinte comando:
+### Dependências opcionais (para PNG)
 ```bash
-npm run dev
+# Ubuntu/Debian
+sudo apt-get install wkhtmltopdf imagemagick
+# macOS
+brew install --cask wkhtmltopdf && brew install imagemagick
 ```
-O terminal vai mostrar um link (ex: `http://localhost:5173`). Segure `Ctrl` e clique no link para abrir a página no seu navegador.
 
 ---
 
-### ⚠️ Atenção: Por que a página ficou em branco?
-Se você tentou abrir o arquivo `index.html` que está na raiz do projeto direto no navegador, a página vai ficar totalmente em branco! Isso acontece porque os navegadores não conseguem ler código React diretamente sem um servidor de desenvolvimento ou sem antes compilar o código.
+## O que é novo no Studio4
+
+### 1. Edição por bloco clicável
+Cada criativo é composto por **blocos independentes**:
+
+| Tipo | Base | Controles |
+|------|------|-----------|
+| `headline` | 88px | Fonte, Tamanho %, Cor, Alinhamento, Spacing, Opacity |
+| `subhead` | 30px | Fonte, Tamanho %, Cor, Alinhamento, Spacing, Opacity |
+| `value` | 96px | Fonte, Tamanho %, Cor, Alinhamento (suporta split "a"/"to") |
+| `cta` | 28px | Texto, Cor, Alinhamento |
+| `disclaimer` | 13px | Cor, Tamanho %, Opacity |
+| `divider` | — | Largura %, Cor, Opacity |
+| `spacer` | — | Altura em px |
+
+- Adicione quantos blocos quiser de cada tipo
+- Reordene com ↑↓
+- Oculte/mostre individualmente com o toggle de visibilidade
+- **Anti-colisão total**: quando um texto quebra linha, todos os blocos seguintes descem automaticamente
+
+### 2. Background
+- Upload de imagem (JPG, PNG, WebP)
+- **Efeito P&B** (grayscale SVG filter)
+- **Efeito Degradê** (overlay gradiente da imagem para cor de fundo)
+- Opacidade ajustável (0–100%)
+- Cor de fundo sólida com picker
+- "Da bandeira" — aplica paleta do país primário automaticamente
+
+### 3. Tradução e clones por país
+- Cole o texto em PT-BR no país primário
+- Adicione países clones — tradução automática via Claude API
+- Alterações de **fonte, tamanho e cor** no primário propagam para todos os clones
+- Cada clone tem menu próprio com:
+  - Textos traduzidos editáveis
+  - Visibilidade independente por bloco (●/○)
+  - Preview individual
+- Novos blocos adicionados são traduzidos para todos os clones automaticamente
+- Sem API key: retorna texto original com CTA localizado
+
+### 4. Exportação
+- País primário + todos os clones
+- Formatos 3:4 e/ou 9:16 por clique
+- SVG sempre; PNG opcional (requer wkhtmltoimage)
+- ZIP automático para download
 
 ---
 
-### 5️⃣ Gerar a página única offline (A melhor parte!)
-Para gerar o arquivo final que roda em qualquer lugar sem internet, digite o seguinte comando:
+## Anti-colisão (LayoutCursor)
+
+```
+top_margin
+  ↓ first_y(fk, fs)           ← topo visual = top_margin
+[BLOCO 1 baseline]
+  ↓ bottom_of(baseline) + br  ← fundo real + breathing
+[BLOCO 2 baseline]             ← nunca começa acima do fundo anterior
+  ↓ bottom_of(baseline) + br
+[BLOCO 3 baseline]
+  ...até y_ct (zona CTA)
+[CTA fixo y=1265 (3:4) | 1540 (9:16)]
+[DISC fixo y=1310 (3:4) | 1830 (9:16)]
+```
+
+Quebra de linha automática → empurra todos os blocos seguintes → zero sobreposição.
+
+---
+
+## API
+
 ```bash
-npm run build
+# Preview rápido
+POST /api/preview
+{ "document": {...}, "fmt": "34" }
+
+# Traduzir blocos para múltiplos países
+POST /api/translate
+{ "blocks": [...], "countries": ["US","JP","DE"], "source_lang": "pt-BR" }
+
+# Gerar (exportar com job async)
+POST /api/generate
+{ "mode": "document", "document": {...}, "clones": [...], "formats": ["34","916"], "generate_png": true }
+
+# Status do job
+GET /api/status/{job_id}
+
+# Download ZIP
+GET /api/download/{job_id}
+
+# Upload imagem para background
+POST /api/upload-image  (multipart/form-data, campo "file")
+
+# Paleta do país
+GET /api/country-palette/BR
 ```
-Esse comando vai criar uma pasta chamada **`dist`** no seu projeto.
-Dentro dela, haverá um arquivo chamado **`index.html`**.
-
-✨ **Esse arquivo `index.html` é tudo o que você precisa!** Você pode copiá-lo para um pen drive, enviá-lo pelo WhatsApp ou executá-lo diretamente no celular. Ele não depende de mais nada e funciona 100% offline.
 
 ---
 
-## 💻 Versão Python Offline
-Se você também preferir rodar os cálculos no terminal usando Python Puro, a aplicação web tem um botão na aba de Relatório para baixar o script Python automaticamente!
+## Estrutura
+
+```
+studio4/
+├── app.py                    # Flask backend + rotas
+├── engine/
+│   ├── core.py               # Física tipográfica + primitivos SVG
+│   ├── layout.py             # LayoutCursor anti-colisão
+│   ├── renderer.py           # BlockRenderer — documento → SVG
+│   ├── translator.py         # Tradução via Claude API
+│   ├── models.py             # 14 modelos A–N (modo clássico)
+│   └── countries.py          # 25 países com paletas
+├── templates/
+│   └── index.html            # UI completa (single file)
+├── uploads/                  # Imagens de background temporárias
+└── outputs/
+    ├── svg/                  # SVGs exportados
+    ├── png/                  # PNGs exportados
+    └── zip/                  # ZIPs para download
+```
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
-- **React 19** com TypeScript
-- **Vite** para desenvolvimento ultra-rápido
-- **Tailwind CSS** para design moderno e responsivo
-- **vite-plugin-singlefile** para empacotar o sistema em um único arquivo HTML standalone
+## Configurar tradução automática
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+python app.py
+```
+
+Ou cole a chave na aba **Config** da interface.
+
+---
+
+## Licença
+
+MIT
