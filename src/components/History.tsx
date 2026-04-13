@@ -35,7 +35,7 @@ export const History = () => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `avaliacao-${calculation.id}.json`;
+    link.download = `avalialaudo-${calculation.id}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };

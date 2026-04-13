@@ -16,7 +16,7 @@ export const Navbar = () => {
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
               <Home className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-xl text-gray-800">Avalia Imóvel</span>
+            <span className="font-bold text-xl text-gray-800">AVALIALAUDO</span>
           </Link>
 
           <div className="flex items-center gap-1">

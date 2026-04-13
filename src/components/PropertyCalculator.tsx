@@ -65,14 +65,7 @@ export const PropertyCalculator = () => {
     ));
   };
 
-  const updateTargetFactor = (factorId: string, value: number) => {
-    setTargetProperty(prev => ({
-      ...prev,
-      factors: prev.factors.map(f =>
-        f.factorId === factorId ? { ...f, value: Math.max(0.5, Math.min(1.5, value)) } : f
-      ),
-    }));
-  };
+
 
   const updateComparable = (compId: string, field: string, value: number | string) => {
     setComparables(prev => prev.map(c =>
@@ -117,16 +110,24 @@ export const PropertyCalculator = () => {
       return;
     }
 
-    const valuePerSqmList = validComparables.map(c => c.value / c.area);
+    // Calcula valor homogeneizado por m² de cada comparável
+    const homogenizedValues = validComparables.map(c => {
+      let valuePerSqm = c.value / c.area;
+      factors.forEach(f => {
+        const factorValue = c.factors.find(cf => cf.factorId === f.id)?.value || 1;
+        valuePerSqm *= factorValue;
+      });
+      return valuePerSqm;
+    });
     
-    const filteredValues = applyChauvenetCriterion(valuePerSqmList);
+    const filteredValues = applyChauvenetCriterion(homogenizedValues);
     
     const excludedComparables = validComparables
-      .filter((_, i) => !filteredValues.includes(valuePerSqmList[i]))
+      .filter((_, i) => !filteredValues.includes(homogenizedValues[i]))
       .map(c => c.description || c.id);
     
     const usedComparables = validComparables
-      .filter((_, i) => filteredValues.includes(valuePerSqmList[i]))
+      .filter((_, i) => filteredValues.includes(homogenizedValues[i]))
       .map(c => c.description || c.id);
 
     const averageValuePerSqm = filteredValues.reduce((a, b) => a + b, 0) / filteredValues.length;
@@ -135,26 +136,11 @@ export const PropertyCalculator = () => {
       ? (sortedValues[sortedValues.length / 2 - 1] + sortedValues[sortedValues.length / 2]) / 2
       : sortedValues[Math.floor(sortedValues.length / 2)];
 
-    let adjustedValuePerSqm = averageValuePerSqm;
-    if (factors.length > 0) {
-      const factorAdjustments = factors.map(factor => {
-        const targetFactor = targetProperty.factors.find(f => f.factorId === factor.id)?.value || 1;
-        const compFactors = validComparables.map(c => 
-          c.factors.find(f => f.factorId === factor.id)?.value || 1
-        );
-        const avgCompFactor = compFactors.reduce((a, b) => a + b, 0) / compFactors.length;
-        return targetFactor / avgCompFactor;
-      });
-      
-      const adjustmentFactor = factorAdjustments.reduce((a, b) => a * b, 1) / factorAdjustments.length;
-      adjustedValuePerSqm = averageValuePerSqm * adjustmentFactor;
-    }
-
-    const estimatedValue = adjustedValuePerSqm * targetProperty.area;
+    const estimatedValue = averageValuePerSqm * targetProperty.area;
 
     const finalResult = {
       estimatedValue: Math.round(estimatedValue),
-      valuePerSqm: Math.round(adjustedValuePerSqm),
+      valuePerSqm: Math.round(averageValuePerSqm),
       usedComparables,
       excludedComparables,
       averageValuePerSqm: Math.round(averageValuePerSqm),
@@ -227,8 +213,10 @@ export const PropertyCalculator = () => {
 
     doc.setFont('helvetica');
 
-    addLine('Avaliação de Imóvel - Método Comparativo Direto', 16, 'center', true);
-    addLine('de Dados de Mercado por Fatores', 14, 'center', true);
+    addLine('AVALIALAUDO', 18, 'center', true);
+    yPos += 5;
+    addLine('Avaliação de Imóvel - Método Comparativo Direto', 14, 'center', true);
+    addLine('de Dados de Mercado por Fatores', 12, 'center', true);
     yPos += 10;
 
     if (result) {
@@ -418,7 +406,7 @@ export const PropertyCalculator = () => {
       addLine(`Valor do imóvel avaliando: ${formatCurrency(result.estimatedValue)}`, 14, 'center', true);
     }
 
-    const fileName = `avaliacao-imovel-${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `avalialaudo-${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   };
 
@@ -430,7 +418,7 @@ export const PropertyCalculator = () => {
             <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <CalcIcon className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Avaliação de Imóvel</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">AVALIALAUDO</h2>
             <p className="text-gray-500">Configure os parâmetros para sua avaliação</p>
           </div>
 
@@ -532,18 +520,6 @@ export const PropertyCalculator = () => {
                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     placeholder="Nome do fator"
                   />
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Alvo:</span>
-                    <input
-                      type="number"
-                      min="0.5"
-                      max="1.5"
-                      step="0.05"
-                      value={targetProperty.factors.find(f => f.factorId === factor.id)?.value || 1}
-                      onChange={(e) => updateTargetFactor(factor.id, parseFloat(e.target.value) || 1)}
-                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    />
-                  </div>
                 </div>
               ))}
             </div>
@@ -659,9 +635,6 @@ export const PropertyCalculator = () => {
             <div className="text-5xl font-bold mb-2">
               {formatCurrency(result.estimatedValue)}
             </div>
-            <p className="text-white/80">
-              Valor por m²: {formatCurrency(result.valuePerSqm)}
-            </p>
           </div>
         </div>
 
