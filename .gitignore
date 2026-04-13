@@ -1,8 +1,5 @@
-@'
 node_modules
 dist
-.vercel
 .env
-.env.*
-*.log
-'@ | Set-Content -Encoding UTF8 .\.gitignore
+.vercel
+.DS_Store
