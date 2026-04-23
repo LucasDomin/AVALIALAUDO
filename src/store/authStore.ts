@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../types';
+import { sendUserData, initiateGoogleLogin } from '../services/api';
 
 interface AuthStore {
   user: User | null;
@@ -10,7 +11,6 @@ interface AuthStore {
   loginWithGoogle: () => void;
 }
 
-// Mock users stored in localStorage
 const STORAGE_KEY = 'app_users';
 const CURRENT_USER_KEY = 'current_user';
 
@@ -29,14 +29,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isAuthenticated: !!getCurrentUser(),
 
   login: (email: string, _password: string) => {
-    // For demo purposes, we'll just check if user exists
-    // In real app, password would be hashed and verified
     const users = getStoredUsers();
     const user = users.find(u => u.email === email);
-    
+
     if (user) {
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
       set({ user, isAuthenticated: true });
+
+      // ── Captação de lead no login ──────────────────────────────
+      sendUserData({ name: user.name, email: user.email, phone: user.phone });
+
       return true;
     }
     return false;
@@ -44,8 +46,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
 
   register: (name: string, email: string, phone: string, _password: string) => {
     const users = getStoredUsers();
-    
-    // Check if email already exists
+
     if (users.find(u => u.email === email)) {
       return false;
     }
@@ -61,8 +62,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
     users.push(newUser);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(newUser));
-    
+
     set({ user: newUser, isAuthenticated: true });
+
+    // ── Captação de lead no cadastro ───────────────────────────
+    sendUserData({ name, email, phone });
+
     return true;
   },
 
@@ -72,8 +77,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   loginWithGoogle: () => {
-    // Placeholder for Google OAuth integration
-    // To be implemented with actual Google OAuth flow
-    console.log('Google login - to be implemented');
+    // ── Chama o fluxo OAuth do Google ─────────────────────────
+    // Para ativar: preencha googleAuthConfig.clientId em src/services/api.ts
+    // Consulte o arquivo TUTORIAL_INTEGRAÇÕES.md para o passo a passo completo.
+    initiateGoogleLogin();
   },
 }));
