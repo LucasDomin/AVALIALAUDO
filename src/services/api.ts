@@ -137,7 +137,7 @@ export const setLeadLoversEndpoint = (endpoint: string): void => {
 // ─────────────────────────────────────────────────────────────
 
 export const googleAuthConfig = {
-  clientId: '', // << COLE SEU CLIENT ID DO GOOGLE CLOUD CONSOLE AQUI
+  clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID as string,
   redirectUri: window.location.origin + '/auth/google/callback',
   scope: 'openid email profile',
 };
