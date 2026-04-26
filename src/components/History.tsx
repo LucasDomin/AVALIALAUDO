@@ -22,168 +22,163 @@ export const History = () => {
     });
   };
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
 
   const downloadAsJSON = (calculation: AppraisalCalculation) => {
     const dataStr = JSON.stringify(calculation, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `avalialaudo-${calculation.id}.json`;
+    link.download = `avaliacao-${calculation.id}.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   if (calculations.length === 0) {
     return (
-      <div className="bg-gray-100 border border-gray-300 p-6 text-center">
-        <FileText className="w-10 h-10 text-gray-500 mx-auto mb-3" />
-        <h3 className="text-blue-900 text-xl font-bold uppercase mb-2">
-          NENHUM CÁLCULO REGISTRADO
-        </h3>
-        <p className="text-gray-700">
-          Você ainda não realizou avaliações de imóvel.
-          Os resultados aparecerão automaticamente aqui.
+      <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+        <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-10 h-10 text-gray-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">Nenhum cálculo ainda</h3>
+        <p className="text-gray-500">
+          Você ainda não realizou nenhuma avaliação de imóvel.
+          <br />
+          Os seus cálculos aparecerão aqui automaticamente.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 font-sans">
-
-      {/* HEADER */}
-      <div className="flex items-center justify-between border-b border-gray-300 pb-3">
-        <h2 className="text-blue-900 text-2xl font-bold flex items-center gap-2 uppercase">
-          <TrendingUp className="w-6 h-6 text-orange-500" />
-          MEUS CÁLCULOS
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <TrendingUp className="w-6 h-6" />
+          Meus Cálculos
         </h2>
-        <span className="text-gray-600 text-sm">
-          Últimos {calculations.length}
+        <span className="text-sm text-gray-500">
+          Últimos {calculations.length} cálculos
         </span>
       </div>
 
-      {/* LISTA */}
-      <div className="space-y-3">
+      <div className="grid gap-4">
         {calculations.map((calc) => (
           <div
             key={calc.id}
-            className="border border-gray-300 bg-gray-100 p-4"
+            className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition"
           >
-            <div className="flex justify-between gap-4">
-
-              {/* INFO */}
+            <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="text-gray-600 text-sm flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
+                <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
+                  <Calendar className="w-4 h-4" />
                   {formatDate(calc.createdAt)}
                 </div>
-
-                <p className="text-gray-800 mb-1">
-                  <span className="font-bold uppercase text-gray-900">IMÓVEL:</span>{' '}
-                  {calc.targetProperty.description}
+                <p className="text-gray-700 mb-2">
+                  <span className="font-medium">Imóvel:</span> {calc.targetProperty.description}
                 </p>
-
-                <p className="text-gray-600 text-sm mb-2">
-                  Área: {calc.targetProperty.area} m² | Comparáveis: {calc.comparables.length}
+                <p className="text-gray-600 text-sm mb-3">
+                  Área: {calc.targetProperty.area} m² | {calc.comparables.length} imóveis comparáveis
                 </p>
-
-                <p className="text-green-700 text-xl font-bold">
-                  {formatCurrency(calc.result.estimatedValue)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-green-500" />
+                  <span className="text-xl font-bold text-green-600">
+                    {formatCurrency(calc.result.estimatedValue)}
+                  </span>
+                </div>
               </div>
-
-              {/* AÇÕES */}
-              <div className="flex flex-col gap-2">
-
+              <div className="flex gap-2 ml-4">
                 <button
                   onClick={() => setSelectedCalculation(calc)}
-                  className="text-orange-600 font-bold uppercase text-sm border border-orange-500 px-3 py-1"
+                  className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition"
+                  title="Ver detalhes"
                 >
-                  VER DETALHES
+                  <Eye className="w-5 h-5" />
                 </button>
-
                 <button
                   onClick={() => downloadAsJSON(calc)}
-                  className="text-blue-900 font-bold uppercase text-sm border border-blue-900 px-3 py-1"
+                  className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition"
+                  title="Baixar JSON"
                 >
-                  DOWNLOAD JSON
+                  <Download className="w-5 h-5" />
                 </button>
-
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* MODAL */}
+      {/* Modal de detalhes */}
       {selectedCalculation && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4">
-
-          <div className="bg-gray-100 border border-gray-300 max-w-2xl w-full p-6">
-
-            <div className="flex justify-between mb-4 border-b border-gray-300 pb-2">
-              <h3 className="text-blue-900 font-bold uppercase">
-                DETALHES DA AVALIAÇÃO
-              </h3>
-
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Detalhes da Avaliação</h3>
               <button
                 onClick={() => setSelectedCalculation(null)}
-                className="text-gray-600 font-bold"
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
-                FECHAR
+                ✕
               </button>
             </div>
 
-            <div className="space-y-4 text-gray-700">
-
-              <div>
-                <p className="font-bold uppercase text-gray-900">IMÓVEL</p>
-                <p>{selectedCalculation.targetProperty.description}</p>
-                <p>{selectedCalculation.targetProperty.area} m²</p>
+            <div className="space-y-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-700 mb-3">Imóvel Avaliado</h4>
+                <p className="text-gray-600">
+                  <span className="font-medium">Descrição:</span> {selectedCalculation.targetProperty.description}
+                </p>
+                <p className="text-gray-600">
+                  <span className="font-medium">Área:</span> {selectedCalculation.targetProperty.area} m²
+                </p>
               </div>
 
-              <div>
-                <p className="font-bold uppercase text-gray-900">VALOR FINAL</p>
-                <p className="text-green-700 font-bold text-xl">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-700 mb-3">Resultado Final</h4>
+                <p className="text-2xl font-bold text-green-600 mb-2">
                   {formatCurrency(selectedCalculation.result.estimatedValue)}
                 </p>
+                <p className="text-gray-600">
+                  Valor por m²: {formatCurrency(selectedCalculation.result.valuePerSqm)}
+                </p>
               </div>
 
-              <div>
-                <p className="font-bold uppercase text-gray-900">
-                  COMPARÁVEIS
-                </p>
-
-                <ul className="list-disc pl-5">
-                  {selectedCalculation.comparables.map((c, i) => (
-                    <li key={c.id}>
-                      {i + 1}. {c.description} — {formatCurrency(c.value)}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-700 mb-3">Imóveis Comparáveis Utilizados</h4>
+                <ul className="space-y-2">
+                  {selectedCalculation.comparables.map((comp, idx) => (
+                    <li key={comp.id} className="text-gray-600">
+                      {idx + 1}. {comp.description} - {formatCurrency(comp.value)}
                     </li>
                   ))}
                 </ul>
               </div>
-
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 flex justify-end gap-3">
               <button
                 onClick={() => downloadAsJSON(selectedCalculation)}
-                className="bg-orange-500 text-white font-bold uppercase px-4 py-2"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
               >
-                DOWNLOAD JSON
+                <Download className="w-4 h-4" />
+                Baixar JSON
+              </button>
+              <button
+                onClick={() => setSelectedCalculation(null)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              >
+                Fechar
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };
