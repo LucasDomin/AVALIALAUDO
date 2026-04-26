@@ -1,5 +1,5 @@
 import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
-import { calcularAvaliacao, type ComparativoInput, type DadosAvaliacao, type ResultadoAvaliacao } from "./domain/calculo";
+import { calcularAvaliacao, type ComparativoInput, type DadosAvaliacao, type FatorDefinicao, type ResultadoAvaliacao } from "./domain/calculo";
 import { dataHoraBR, moedaBR, numeroBR, somenteDigitos } from "./domain/formatacao";
 import { gerarRelatorio } from "./domain/relatorio";
 import { exportarPdf, exportarWord } from "./services/documentExport";
@@ -19,10 +19,24 @@ type Aba = "avaliacao" | "historico" | "usuario";
 
 type EstadoFormulario = DadosAvaliacao;
 
+const fatoresIniciais: FatorDefinicao[] = [
+  { id: "f_oferta", nome: "Oferta" },
+  { id: "f_localizacao", nome: "Localização" },
+  { id: "f_topografia", nome: "Topografia" },
+];
+
+function fatoresParaComparativo(fatores: FatorDefinicao[]): Record<string, number> {
+  const resultado: Record<string, number> = {};
+  for (const f of fatores) {
+    resultado[f.id] = 1;
+  }
+  return resultado;
+}
+
 const comparativosIniciais: ComparativoInput[] = [
-  { id: "comp_1", descricao: "Comparativo 1", area: 100, valor: 360000, f1: 0.9, f2: 1, f3: 1 },
-  { id: "comp_2", descricao: "Comparativo 2", area: 120, valor: 438000, f1: 0.95, f2: 0.98, f3: 1 },
-  { id: "comp_3", descricao: "Comparativo 3", area: 95, valor: 345000, f1: 0.92, f2: 1.02, f3: 1 },
+  { id: "comp_1", descricao: "Comparativo 1", area: 100, valor: 360000, fatores: { f_oferta: 0.9, f_localizacao: 1, f_topografia: 1 } },
+  { id: "comp_2", descricao: "Comparativo 2", area: 120, valor: 438000, fatores: { f_oferta: 0.95, f_localizacao: 0.98, f_topografia: 1 } },
+  { id: "comp_3", descricao: "Comparativo 3", area: 95, valor: 345000, fatores: { f_oferta: 0.92, f_localizacao: 1.02, f_topografia: 1 } },
 ];
 
 const formularioInicial: EstadoFormulario = {
@@ -30,8 +44,8 @@ const formularioInicial: EstadoFormulario = {
     descricao: "Imóvel residencial avaliando",
     area: 110,
   },
+  fatoresDefinidos: fatoresIniciais,
   comparativos: comparativosIniciais,
-  valorUnitarioAdotado: undefined,
 };
 
 const menu: Array<{ id: Aba; label: string }> = [
@@ -40,15 +54,13 @@ const menu: Array<{ id: Aba; label: string }> = [
   { id: "usuario", label: "USUÁRIO" },
 ];
 
-function novoComparativo(): ComparativoInput {
+function novoComparativo(fatores: FatorDefinicao[]): ComparativoInput {
   return {
     id: `comp_${Date.now()}`,
     descricao: "",
     area: 0,
     valor: 0,
-    f1: 1,
-    f2: 1,
-    f3: 1,
+    fatores: fatoresParaComparativo(fatores),
   };
 }
 
@@ -64,6 +76,8 @@ function relatorioDoResultado(dados: DadosAvaliacao, resultado: ResultadoAvaliac
     celular: usuario.celular,
   });
 }
+
+/* ─── Tela de Acesso ─── */
 
 function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) => void }) {
   const [modo, setModo] = useState<"cadastro" | "login">("cadastro");
@@ -123,9 +137,9 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
         <main className="px-6 py-10 md:px-14 lg:px-20">
           <div className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">ACESSO DO USUÁRIO</p>
-            <h2 className="mt-3 text-4xl font-bold leading-tight text-[#0f2d4d]">Avalia Laudo Master</h2>
+            <h2 className="mt-3 text-4xl font-bold leading-tight text-[#0f2d4d]">AVALIA LAUDO MASTER</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-[#333333]">
-              Ambiente <strong>gratuito e seguro</strong>, replicando o rigor da NBR 14653 com tratamento por fatores e Chauvenet, em uma interface limpa, sem anúncios externos.
+              Ambiente GRATUITO E SEGURO replicando o rigor da NBR 14653 com tratamento por fatores e Chauvenet, em uma interface limpa, sem anúncios externos.
             </p>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-[#333333]">
               Somos referência em avaliação imobiliária há anos. Alunos e profissionais confiam nos nossos critérios técnicos.
@@ -179,6 +193,8 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
   );
 }
 
+/* ─── Componentes auxiliares ─── */
+
 function LinhaResumo({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="grid gap-1 border-t border-[#c8ccd0] py-3 md:grid-cols-[260px_1fr]">
@@ -188,7 +204,11 @@ function LinhaResumo({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
+/* ─── Resultado técnico ─── */
+
 function ResultadoTecnico({ resultado }: { resultado: ResultadoAvaliacao }) {
+  const fatores = resultado.fatoresDefinidos;
+
   return (
     <section className="mt-10 border-t-2 border-[#0f2d4d] pt-8">
       <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">RESULTADO CALCULADO</p>
@@ -203,22 +223,22 @@ function ResultadoTecnico({ resultado }: { resultado: ResultadoAvaliacao }) {
         <LinhaResumo rotulo="Desvio padrão final" valor={moedaBR(resultado.estatisticaFinal.desvioPadrao)} />
         <LinhaResumo rotulo="Intervalo 80%" valor={`${moedaBR(resultado.intervalo80.limiteInferior)} a ${moedaBR(resultado.intervalo80.limiteSuperior)}`} />
         <LinhaResumo rotulo="Campo de arbítrio" valor={`${moedaBR(resultado.campoArbitrio.minimo)} a ${moedaBR(resultado.campoArbitrio.maximo)}`} />
-        <LinhaResumo rotulo="Valor unitário adotado" valor={`${moedaBR(resultado.valorUnitarioAdotado)} por m²`} />
+        <LinhaResumo rotulo="Valor unitário (média final)" valor={`${moedaBR(resultado.valorUnitarioAdotado)} por m²`} />
         <LinhaResumo rotulo="Valor final" valor={moedaBR(resultado.valorFinal)} />
       </dl>
 
       <div className="mt-8 overflow-x-auto">
         <h3 className="text-xl font-bold text-[#0f2d4d]">Tabela de homogeneização</h3>
-        <table className="mt-4 w-full min-w-[860px] border-collapse text-left text-sm">
+        <table className="mt-4 w-full border-collapse text-left text-sm">
           <thead>
             <tr className="text-[#0f2d4d]">
               <th className="border border-[#aeb4ba] px-3 py-2">Imóvel</th>
               <th className="border border-[#aeb4ba] px-3 py-2">Área</th>
               <th className="border border-[#aeb4ba] px-3 py-2">Valor</th>
               <th className="border border-[#aeb4ba] px-3 py-2">R$/m²</th>
-              <th className="border border-[#aeb4ba] px-3 py-2">F1</th>
-              <th className="border border-[#aeb4ba] px-3 py-2">F2</th>
-              <th className="border border-[#aeb4ba] px-3 py-2">F3</th>
+              {fatores.map((f) => (
+                <th className="border border-[#aeb4ba] px-3 py-2" key={f.id}>{f.nome}</th>
+              ))}
               <th className="border border-[#aeb4ba] px-3 py-2">Vh</th>
             </tr>
           </thead>
@@ -229,9 +249,9 @@ function ResultadoTecnico({ resultado }: { resultado: ResultadoAvaliacao }) {
                 <td className="border border-[#aeb4ba] px-3 py-2">{numeroBR(amostra.area)} m²</td>
                 <td className="border border-[#aeb4ba] px-3 py-2">{moedaBR(amostra.valor)}</td>
                 <td className="border border-[#aeb4ba] px-3 py-2">{moedaBR(amostra.valorM2)}</td>
-                <td className="border border-[#aeb4ba] px-3 py-2">{numeroBR(amostra.f1, 3)}</td>
-                <td className="border border-[#aeb4ba] px-3 py-2">{numeroBR(amostra.f2, 3)}</td>
-                <td className="border border-[#aeb4ba] px-3 py-2">{numeroBR(amostra.f3, 3)}</td>
+                {fatores.map((f) => (
+                  <td className="border border-[#aeb4ba] px-3 py-2" key={f.id}>{numeroBR(amostra.fatores[f.id] ?? 1, 3)}</td>
+                ))}
                 <td className="border border-[#aeb4ba] px-3 py-2 font-bold">{moedaBR(amostra.valorHomogeneizado)}</td>
               </tr>
             ))}
@@ -279,6 +299,8 @@ function ResultadoTecnico({ resultado }: { resultado: ResultadoAvaliacao }) {
   );
 }
 
+/* ─── App principal ─── */
+
 function App() {
   const [usuario, setUsuario] = useState<Usuario | null>(() => obterSessao());
   const [aba, setAba] = useState<Aba>("avaliacao");
@@ -306,22 +328,72 @@ function App() {
 
   const usuarioAtivo = usuario;
 
+  /* ─── Funções de atualização ─── */
+
   function atualizarAvaliando(campo: "descricao" | "area", valor: string | number) {
     setFormulario((atual) => ({
       ...atual,
-      avaliando: {
-        ...atual.avaliando,
-        [campo]: valor,
-      },
+      avaliando: { ...atual.avaliando, [campo]: valor },
     }));
   }
 
-  function atualizarComparativo(id: string, campo: keyof ComparativoInput, valor: string | number) {
+  function atualizarComparativo(id: string, campo: "descricao" | "area" | "valor", valor: string | number) {
     setFormulario((atual) => ({
       ...atual,
-      comparativos: atual.comparativos.map((comparativo) => (comparativo.id === id ? { ...comparativo, [campo]: valor } : comparativo)),
+      comparativos: atual.comparativos.map((c) => (c.id === id ? { ...c, [campo]: valor } : c)),
     }));
   }
+
+  function atualizarFatorComparativo(comparativoId: string, fatorId: string, valor: number) {
+    setFormulario((atual) => ({
+      ...atual,
+      comparativos: atual.comparativos.map((c) =>
+        c.id === comparativoId ? { ...c, fatores: { ...c.fatores, [fatorId]: valor } } : c,
+      ),
+    }));
+  }
+
+  /* ─── Funções de fatores ─── */
+
+  function adicionarFator() {
+    const indice = formulario.fatoresDefinidos.length + 1;
+    const novoId = `f_${Date.now()}`;
+    const novoFator: FatorDefinicao = { id: novoId, nome: `Fator ${indice}` };
+
+    setFormulario((atual) => ({
+      ...atual,
+      fatoresDefinidos: [...atual.fatoresDefinidos, novoFator],
+      comparativos: atual.comparativos.map((c) => ({
+        ...c,
+        fatores: { ...c.fatores, [novoId]: 1 },
+      })),
+    }));
+  }
+
+  function removerFator(fatorId: string) {
+    setFormulario((atual) => {
+      if (atual.fatoresDefinidos.length <= 1) return atual;
+
+      return {
+        ...atual,
+        fatoresDefinidos: atual.fatoresDefinidos.filter((f) => f.id !== fatorId),
+        comparativos: atual.comparativos.map((c) => {
+          const novosFatores = { ...c.fatores };
+          delete novosFatores[fatorId];
+          return { ...c, fatores: novosFatores };
+        }),
+      };
+    });
+  }
+
+  function renomearFator(fatorId: string, novoNome: string) {
+    setFormulario((atual) => ({
+      ...atual,
+      fatoresDefinidos: atual.fatoresDefinidos.map((f) => (f.id === fatorId ? { ...f, nome: novoNome } : f)),
+    }));
+  }
+
+  /* ─── Calcular ─── */
 
   function calcularESalvar(evento?: FormEvent<HTMLFormElement>) {
     evento?.preventDefault();
@@ -362,9 +434,12 @@ function App() {
     if (tipo === "word") void exportarWord(relatorio);
   }
 
+  /* ─── Render ─── */
+
   return (
     <div className="min-h-screen bg-[#eef0f2] font-sans text-[#333333]">
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
+        {/* Sidebar */}
         <aside className="border-r border-[#c8ccd0] bg-white p-8">
           <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">LAUDO IMOBILIÁRIO</p>
           <h1 className="mt-5 text-3xl font-bold leading-tight text-[#0f2d4d]">Avaliação Técnica</h1>
@@ -393,15 +468,19 @@ function App() {
           </div>
         </aside>
 
+        {/* Conteúdo principal */}
         <main className="px-5 py-8 md:px-10 lg:px-14">
+
+          {/* ─── ABA AVALIAÇÃO ─── */}
           {aba === "avaliacao" && (
             <form className="max-w-6xl" onSubmit={calcularESalvar}>
               <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">MOTOR DE CÁLCULO</p>
               <h2 className="mt-2 text-4xl font-bold leading-tight text-[#0f2d4d]">Avaliação por comparação direta com tratamento por fatores</h2>
               <p className="mt-5 max-w-4xl text-lg leading-8">
-                Informe o imóvel avaliando e os comparativos. O sistema calcula valor por metro quadrado, valor homogeneizado, média, desvio padrão amostral, Chauvenet, intervalo de confiança de 80%, campo de arbítrio e valor final.
+                Informe o imóvel avaliando, defina os fatores de homogeneização conforme sua necessidade e preencha os comparativos. O sistema calcula valor por metro quadrado, valor homogeneizado, média, desvio padrão amostral, Chauvenet, intervalo de confiança de 80%, campo de arbítrio e valor final.
               </p>
 
+              {/* Imóvel avaliando */}
               <section className="mt-10 border-t border-[#c8ccd0] pt-8">
                 <h3 className="text-2xl font-bold text-[#0f2d4d]">Imóvel avaliando</h3>
                 <div className="mt-5 grid gap-5 md:grid-cols-[1fr_220px]">
@@ -416,27 +495,60 @@ function App() {
                 </div>
               </section>
 
+              {/* Fatores de homogeneização */}
+              <section className="mt-10 border-t border-[#c8ccd0] pt-8">
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+                  <div>
+                    <h3 className="text-2xl font-bold text-[#0f2d4d]">Fatores de homogeneização</h3>
+                    <p className="mt-2 max-w-3xl leading-7">Defina os fatores que serão aplicados a cada comparativo. Você pode renomear, adicionar ou remover fatores conforme a necessidade da avaliação.</p>
+                  </div>
+                  <button className="w-fit border border-[#e06600] px-5 py-3 text-sm font-bold uppercase tracking-wide text-[#e06600]" type="button" onClick={adicionarFator}>
+                    ADICIONAR FATOR
+                  </button>
+                </div>
+
+                <div className="mt-6 grid gap-3">
+                  {formulario.fatoresDefinidos.map((fator, indice) => (
+                    <div className="flex items-center gap-4" key={fator.id}>
+                      <span className="w-10 text-sm font-bold uppercase tracking-wide text-[#0f2d4d]">F{indice + 1}</span>
+                      <input
+                        className="flex-1 border border-[#aeb4ba] bg-white px-3 py-3 text-[#333333] outline-none"
+                        value={fator.nome}
+                        onChange={(evento) => renomearFator(fator.id, evento.target.value)}
+                        placeholder={`Nome do fator ${indice + 1}`}
+                      />
+                      {formulario.fatoresDefinidos.length > 1 && (
+                        <button className="text-sm font-bold uppercase tracking-wide text-[#e06600]" type="button" onClick={() => removerFator(fator.id)}>
+                          REMOVER
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Imóveis comparativos */}
               <section className="mt-10 border-t border-[#c8ccd0] pt-8">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
                   <div>
                     <h3 className="text-2xl font-bold text-[#0f2d4d]">Imóveis comparativos</h3>
-                    <p className="mt-2 max-w-3xl leading-7">F1 representa oferta, F2 representa localização e F3 representa topografia. Use valores positivos para manter a amostra válida.</p>
+                    <p className="mt-2 max-w-3xl leading-7">Preencha os dados de cada comparativo. Os fatores definidos acima aparecem como colunas editáveis. Use valores positivos para manter a amostra válida.</p>
                   </div>
-                  <button className="w-fit border border-[#e06600] px-5 py-3 text-sm font-bold uppercase tracking-wide text-[#e06600]" type="button" onClick={() => setFormulario((atual) => ({ ...atual, comparativos: [...atual.comparativos, novoComparativo()] }))}>
+                  <button className="w-fit border border-[#e06600] px-5 py-3 text-sm font-bold uppercase tracking-wide text-[#e06600]" type="button" onClick={() => setFormulario((atual) => ({ ...atual, comparativos: [...atual.comparativos, novoComparativo(atual.fatoresDefinidos)] }))}>
                     ADICIONAR COMPARATIVO
                   </button>
                 </div>
 
                 <div className="mt-6 overflow-x-auto">
-                  <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+                  <table className="w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="text-[#0f2d4d]">
                         <th className="border border-[#aeb4ba] px-3 py-2">Descrição</th>
                         <th className="border border-[#aeb4ba] px-3 py-2">Área</th>
                         <th className="border border-[#aeb4ba] px-3 py-2">Valor</th>
-                        <th className="border border-[#aeb4ba] px-3 py-2">F1</th>
-                        <th className="border border-[#aeb4ba] px-3 py-2">F2</th>
-                        <th className="border border-[#aeb4ba] px-3 py-2">F3</th>
+                        {formulario.fatoresDefinidos.map((f, i) => (
+                          <th className="border border-[#aeb4ba] px-3 py-2" key={f.id}>F{i + 1} ({f.nome})</th>
+                        ))}
                         <th className="border border-[#aeb4ba] px-3 py-2">Ação</th>
                       </tr>
                     </thead>
@@ -444,7 +556,7 @@ function App() {
                       {formulario.comparativos.map((comparativo) => (
                         <tr key={comparativo.id}>
                           <td className="border border-[#aeb4ba] px-2 py-2">
-                            <input className="w-full bg-white px-2 py-2 outline-none" value={comparativo.descricao} onChange={(evento) => atualizarComparativo(comparativo.id, "descricao", evento.target.value)} />
+                            <input className="w-full min-w-[140px] bg-white px-2 py-2 outline-none" value={comparativo.descricao} onChange={(evento) => atualizarComparativo(comparativo.id, "descricao", evento.target.value)} />
                           </td>
                           <td className="border border-[#aeb4ba] px-2 py-2">
                             <input className="w-28 bg-white px-2 py-2 outline-none" min="0" step="0.01" type="number" value={comparativo.area} onChange={(evento) => atualizarComparativo(comparativo.id, "area", campoNumero(evento))} />
@@ -452,15 +564,11 @@ function App() {
                           <td className="border border-[#aeb4ba] px-2 py-2">
                             <input className="w-36 bg-white px-2 py-2 outline-none" min="0" step="0.01" type="number" value={comparativo.valor} onChange={(evento) => atualizarComparativo(comparativo.id, "valor", campoNumero(evento))} />
                           </td>
-                          <td className="border border-[#aeb4ba] px-2 py-2">
-                            <input className="w-24 bg-white px-2 py-2 outline-none" min="0" step="0.001" type="number" value={comparativo.f1} onChange={(evento) => atualizarComparativo(comparativo.id, "f1", campoNumero(evento))} />
-                          </td>
-                          <td className="border border-[#aeb4ba] px-2 py-2">
-                            <input className="w-24 bg-white px-2 py-2 outline-none" min="0" step="0.001" type="number" value={comparativo.f2} onChange={(evento) => atualizarComparativo(comparativo.id, "f2", campoNumero(evento))} />
-                          </td>
-                          <td className="border border-[#aeb4ba] px-2 py-2">
-                            <input className="w-24 bg-white px-2 py-2 outline-none" min="0" step="0.001" type="number" value={comparativo.f3} onChange={(evento) => atualizarComparativo(comparativo.id, "f3", campoNumero(evento))} />
-                          </td>
+                          {formulario.fatoresDefinidos.map((f) => (
+                            <td className="border border-[#aeb4ba] px-2 py-2" key={f.id}>
+                              <input className="w-24 bg-white px-2 py-2 outline-none" min="0" step="0.001" type="number" value={comparativo.fatores[f.id] ?? 1} onChange={(evento) => atualizarFatorComparativo(comparativo.id, f.id, campoNumero(evento))} />
+                            </td>
+                          ))}
                           <td className="border border-[#aeb4ba] px-3 py-2">
                             <button
                               className="font-bold uppercase tracking-wide text-[#e06600]"
@@ -477,22 +585,9 @@ function App() {
                 </div>
               </section>
 
-              <section className="mt-10 border-t border-[#c8ccd0] pt-8">
-                <h3 className="text-2xl font-bold text-[#0f2d4d]">Valor unitário adotado</h3>
-                <p className="mt-2 max-w-3xl leading-7">Deixe em branco para adotar automaticamente a média final. Caso informe um valor, o sistema mantém o cálculo e sinaliza se estiver fora do campo de arbítrio de 10%.</p>
-                <label className="mt-5 grid max-w-sm gap-2 text-sm font-bold uppercase tracking-wide text-[#0f2d4d]">
-                  R$/m² adotado
-                  <input
-                    className="border border-[#aeb4ba] bg-white px-3 py-3 font-normal text-[#333333] outline-none"
-                    min="0"
-                    step="0.01"
-                    type="number"
-                    value={formulario.valorUnitarioAdotado ?? ""}
-                    onChange={(evento) => setFormulario((atual) => ({ ...atual, valorUnitarioAdotado: evento.target.value ? campoNumero(evento) : undefined }))}
-                  />
-                </label>
-              </section>
 
+
+              {/* Botões de ação */}
               <div className="mt-10 flex flex-wrap gap-4 border-t border-[#c8ccd0] pt-8">
                 <button className="border border-[#e06600] bg-[#e06600] px-6 py-3 text-sm font-bold uppercase tracking-wide text-white" type="submit">
                   CALCULAR E SALVAR
@@ -523,6 +618,7 @@ function App() {
             </form>
           )}
 
+          {/* ─── ABA HISTÓRICO ─── */}
           {aba === "historico" && (
             <section className="max-w-5xl">
               <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">ÚLTIMOS 3 CÁLCULOS</p>
@@ -555,6 +651,7 @@ function App() {
             </section>
           )}
 
+          {/* ─── ABA USUÁRIO ─── */}
           {aba === "usuario" && (
             <section className="max-w-4xl">
               <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">DADOS DO AMBIENTE</p>

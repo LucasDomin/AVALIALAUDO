@@ -3,14 +3,17 @@ export type ImovelAvaliando = {
   area: number;
 };
 
+export type FatorDefinicao = {
+  id: string;
+  nome: string;
+};
+
 export type ComparativoInput = {
   id: string;
   descricao: string;
   area: number;
   valor: number;
-  f1: number;
-  f2: number;
-  f3: number;
+  fatores: Record<string, number>;
 };
 
 export type AmostraHomogeneizada = ComparativoInput & {
@@ -41,6 +44,7 @@ export type CampoArbitrio = {
 };
 
 export type ResultadoAvaliacao = {
+  fatoresDefinidos: FatorDefinicao[];
   amostras: AmostraHomogeneizada[];
   estatisticaInicial: Estatistica;
   valorCriticoChauvenet: number;
@@ -56,6 +60,7 @@ export type ResultadoAvaliacao = {
 
 export type DadosAvaliacao = {
   avaliando: ImovelAvaliando;
+  fatoresDefinidos: FatorDefinicao[];
   comparativos: ComparativoInput[];
   valorUnitarioAdotado?: number;
 };
@@ -152,6 +157,17 @@ export function valorTC80(grausLiberdade: number) {
   return interpolar(grausLiberdade, STUDENT_T_80_TABLE, "df", "tc");
 }
 
+function produtoFatores(fatores: Record<string, number>, idsAtivos: string[]): number {
+  let produto = 1;
+  for (const id of idsAtivos) {
+    const v = fatores[id];
+    if (v !== undefined && v > 0) {
+      produto *= v;
+    }
+  }
+  return produto;
+}
+
 export function calcularAvaliacao(dados: DadosAvaliacao): ResultadoAvaliacao {
   if (!dados.avaliando.descricao.trim()) {
     throw new Error("Informe a descrição do imóvel avaliando.");
@@ -161,15 +177,19 @@ export function calcularAvaliacao(dados: DadosAvaliacao): ResultadoAvaliacao {
     throw new Error("Informe a área do imóvel avaliando com valor maior que zero.");
   }
 
-  const comparativosValidos = dados.comparativos.filter(
-    (comparativo) =>
-      comparativo.descricao.trim() &&
-      comparativo.area > 0 &&
-      comparativo.valor > 0 &&
-      comparativo.f1 > 0 &&
-      comparativo.f2 > 0 &&
-      comparativo.f3 > 0,
-  );
+  if (dados.fatoresDefinidos.length === 0) {
+    throw new Error("Defina pelo menos um fator de homogeneização.");
+  }
+
+  const idsAtivos = dados.fatoresDefinidos.map((f) => f.id);
+
+  const comparativosValidos = dados.comparativos.filter((comparativo) => {
+    if (!comparativo.descricao.trim() || comparativo.area <= 0 || comparativo.valor <= 0) return false;
+    return idsAtivos.every((id) => {
+      const v = comparativo.fatores[id];
+      return v !== undefined && v > 0;
+    });
+  });
 
   if (comparativosValidos.length < 3) {
     throw new Error("Informe pelo menos 3 imóveis comparativos completos.");
@@ -177,7 +197,7 @@ export function calcularAvaliacao(dados: DadosAvaliacao): ResultadoAvaliacao {
 
   const amostras = comparativosValidos.map((comparativo) => {
     const valorM2 = comparativo.valor / comparativo.area;
-    const valorHomogeneizado = valorM2 * comparativo.f1 * comparativo.f2 * comparativo.f3;
+    const valorHomogeneizado = valorM2 * produtoFatores(comparativo.fatores, idsAtivos);
 
     return {
       ...comparativo,
@@ -233,6 +253,7 @@ export function calcularAvaliacao(dados: DadosAvaliacao): ResultadoAvaliacao {
   }
 
   return {
+    fatoresDefinidos: dados.fatoresDefinidos,
     amostras,
     estatisticaInicial,
     valorCriticoChauvenet: valorCritico,

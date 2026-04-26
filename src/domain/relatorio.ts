@@ -38,6 +38,10 @@ export type RelatorioAvaliacao = {
 
 export function gerarRelatorio(dados: DadosAvaliacao, resultado: ResultadoAvaliacao, usuario: UsuarioRelatorio): RelatorioAvaliacao {
   const geradoEm = new Date().toISOString();
+  const fatores = resultado.fatoresDefinidos;
+  const nomesFatores = fatores.map((f) => f.nome);
+  const formulaFatores = fatores.map((_, i) => `F${i + 1}`).join(" x ");
+  const descricaoFatores = fatores.map((f, i) => `F${i + 1} (${f.nome})`).join(", ");
 
   return {
     titulo: "AVALIAÇÃO DE IMÓVEL POR COMPARAÇÃO DIRETA",
@@ -53,14 +57,15 @@ export function gerarRelatorio(dados: DadosAvaliacao, resultado: ResultadoAvalia
         titulo: "1. FINALIDADE E CRITÉRIO TÉCNICO",
         paragrafos: [
           "O presente documento apresenta avaliação de imóvel pelo método comparativo direto de dados de mercado, com tratamento por fatores, conforme diretrizes da ABNT NBR 14653.",
-          "O procedimento considera imóveis comparativos de mercado e aplica fatores de homogeneização para oferta, localização e topografia, de modo a aproximar as amostras às condições do imóvel avaliando.",
+          `O procedimento considera imóveis comparativos de mercado e aplica fatores de homogeneização (${descricaoFatores}), de modo a aproximar as amostras às condições do imóvel avaliando.`,
         ],
       },
       {
         titulo: "2. TRATAMENTO POR FATORES",
         paragrafos: [
-          "Para cada imóvel comparativo, o valor unitário é obtido pela divisão do valor de mercado pela área informada. Em seguida, o valor unitário é multiplicado pelos fatores F1, F2 e F3.",
-          "Fórmula aplicada: Vh = (Valor / Área) x F1 x F2 x F3, em que Vh corresponde ao valor homogeneizado por metro quadrado.",
+          "Para cada imóvel comparativo, o valor unitário é obtido pela divisão do valor de mercado pela área informada. Em seguida, o valor unitário é multiplicado pelos fatores definidos.",
+          `Fórmula aplicada: Vh = (Valor / Área) x ${formulaFatores}, em que Vh corresponde ao valor homogeneizado por metro quadrado.`,
+          `Fatores utilizados: ${descricaoFatores}.`,
         ],
       },
       {
@@ -74,15 +79,13 @@ export function gerarRelatorio(dados: DadosAvaliacao, resultado: ResultadoAvalia
     tabelas: [
       {
         titulo: "TABELA DE HOMOGENEIZAÇÃO",
-        cabecalho: ["Imóvel", "Área", "Valor", "R$/m²", "F1", "F2", "F3", "Vh"],
+        cabecalho: ["Imóvel", "Área", "Valor", "R$/m²", ...nomesFatores, "Vh"],
         linhas: resultado.amostras.map((amostra) => [
           amostra.descricao,
           `${numeroBR(amostra.area)} m²`,
           moedaBR(amostra.valor),
           moedaBR(amostra.valorM2),
-          numeroBR(amostra.f1, 3),
-          numeroBR(amostra.f2, 3),
-          numeroBR(amostra.f3, 3),
+          ...fatores.map((f) => numeroBR(amostra.fatores[f.id] ?? 1, 3)),
           moedaBR(amostra.valorHomogeneizado),
         ]),
       },
