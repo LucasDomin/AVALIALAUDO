@@ -80,13 +80,32 @@ function relatorioDoResultado(dados: DadosAvaliacao, resultado: ResultadoAvaliac
 
 /* ─── Tela de Acesso ─── */
 
-function GoogleLoginButton() {
+function GoogleLoginButton({ onAutenticado }: { onAutenticado: (usuario: Usuario) => void }) {
   const login = useGoogleLogin({
-    onSuccess: (tokenResponse: any) => console.log(tokenResponse),
-    onError: () => console.log("Login Failed"),
+    onSuccess: async (tokenResponse) => {
+      // Busca os dados do usuário no Google
+      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+      });
+      const perfil = await res.json();
+
+      // Busca ou cadastra o usuário localmente
+      let usuario = buscarUsuarioPorEmail(perfil.email);
+      if (!usuario) {
+        usuario = cadastrarUsuario({
+          nome: perfil.name,
+          email: perfil.email,
+          celular: "",
+        });
+      }
+
+      definirSessao(usuario);
+      onAutenticado(usuario);
+    },
+    onError: () => console.error("Login com Google falhou"),
   });
 
-  return (
+return (
     <button
       className="flex w-fit items-center gap-3 border border-[#aeb4ba] bg-white px-6 py-3 text-sm font-bold uppercase tracking-wide text-[#333333]"
       type="button"
@@ -212,7 +231,7 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
                 <button className="w-fit border border-[#e06600] bg-[#e06600] px-6 py-3 text-sm font-bold uppercase tracking-wide text-white" type="submit">
                   {modo === "cadastro" ? "CRIAR E ENTRAR" : "ENTRAR NO SISTEMA"}
                 </button>
-                <GoogleLoginButton />
+                <GoogleLoginButton onAutenticado={onAutenticado} />
               </form>
 
               <p className="mt-8 max-w-xl text-sm leading-6 text-[#7a7f87]">

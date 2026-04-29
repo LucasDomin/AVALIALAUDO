@@ -1,4 +1,5 @@
 import type { DadosAvaliacao, ResultadoAvaliacao } from "../domain/calculo";
+import { enviarLeadHotmart } from "./hotmart";
 
 export type Usuario = {
   id: string;
@@ -52,7 +53,7 @@ export function listarUsuarios() {
 
 export function cadastrarUsuario(dados: Omit<Usuario, "id" | "criadoEm">) {
   const usuarios = listarUsuarios();
-  const existente = usuarios.find((usuario) => usuario.email.toLowerCase() === dados.email.toLowerCase());
+  const existente = usuarios.find((u) => u.email.toLowerCase() === dados.email.toLowerCase());
 
   if (existente) return existente;
 
@@ -63,6 +64,13 @@ export function cadastrarUsuario(dados: Omit<Usuario, "id" | "criadoEm">) {
   };
 
   salvarJson(USERS_KEY, [...usuarios, usuario]);
+
+  void enviarLeadHotmart({
+    nome: usuario.nome,
+    email: usuario.email,
+    celular: usuario.celular,
+  });
+
   return usuario;
 }
 
