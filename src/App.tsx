@@ -128,8 +128,6 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
           <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">SISTEMA TÉCNICO</p>
           <h1 className="mt-6 text-3xl font-bold leading-tight text-[#0f2d4d]">Avaliação Imobiliária</h1>
           <nav className="mt-10 space-y-5 text-sm font-bold uppercase tracking-wide text-[#e06600]">
-            <p>CADASTRO</p>
-            <p>LOGIN</p>
             <p>HISTÓRICO ISOLADO</p>
             <p>PDF E WORD</p>
           </nav>
@@ -143,9 +141,6 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
             </p>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-[#333333]">
               Somos referência em avaliação imobiliária há anos. Alunos e profissionais confiam nos nossos critérios técnicos.
-            </p>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-[#333333]">
-              Seus dados ficam armazenados apenas neste navegador, isolados por usuário. Os últimos três cálculos são preservados automaticamente e a estrutura já está preparada para evoluir com segurança para banco de dados quando você decidir.
             </p>
 
             <div className="mt-10 border-t border-[#c8ccd0] pt-8">
@@ -185,6 +180,10 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
                   ENTRAR COM GOOGLE: OAUTH PREPARADO
                 </button>
               </form>
+
+              <p className="mt-8 max-w-xl text-sm leading-6 text-[#7a7f87]">
+                Seus dados ficam armazenados apenas neste navegador, isolados por usuário. Os últimos três cálculos são preservados automaticamente baseados na LGPD.
+              </p>
             </div>
           </div>
         </main>
