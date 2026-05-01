@@ -14,11 +14,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const response = await fetch("https://handler.send.hotmart.com/convert/ljTj3dO", {
+    const response = await fetch("https://handler.send.hotmart.com/convert/ljTj3dO?hottok=29695111-21a5-4c75-abe8-920e3e83ca82", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "hottok": "29695111-21a5-4c75-abe8-920e3e83ca82",
       },
       body: JSON.stringify({
         ...req.body,
