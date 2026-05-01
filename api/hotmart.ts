@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "hottok": "457bf8d4-f6ef-4eaf-91d8-9934757e908f",
+        "hottok": "29695111-21a5-4c75-abe8-920e3e83ca82",
       },
       body: JSON.stringify({
         ...req.body,
