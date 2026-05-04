@@ -44,8 +44,8 @@ export function gerarRelatorio(dados: DadosAvaliacao, resultado: ResultadoAvalia
   const descricaoFatores = fatores.map((f, i) => `F${i + 1} (${f.nome})`).join(", ");
 
   return {
-    titulo: "AVALIAÇÃO DE IMÓVEL POR COMPARAÇÃO DIRETA",
-    subtitulo: "Tratamento por fatores conforme NBR 14653 e verificação pelo Critério de Chauvenet",
+    titulo: "CALCULADORA LAUDO MASTER",
+    subtitulo: "Avaliação de Imóvel por Comparação Direta — NBR 14653 com Tratamento por Fatores e Critério de Chauvenet",
     geradoEm,
     responsavel: usuario,
     avaliando: {
@@ -123,5 +123,5 @@ export function gerarRelatorio(dados: DadosAvaliacao, resultado: ResultadoAvalia
 
 export function nomeArquivoRelatorio(relatorio: RelatorioAvaliacao, extensao: "pdf" | "docx") {
   const data = dataHoraBR(relatorio.geradoEm).replace(/\D/g, "").slice(0, 8);
-  return `avaliacao-imovel-${data}.${extensao}`;
+  return `calculadora-laudo-master-${data}.${extensao}`;
 }

@@ -1,5 +1,6 @@
 import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
+import { BannerPublicitario } from "./components/BannerPublicitario";
 import { calcularAvaliacao, type ComparativoInput, type DadosAvaliacao, type FatorDefinicao, type ResultadoAvaliacao } from "./domain/calculo";
 import { dataHoraBR, moedaBR, numeroBR, somenteDigitos } from "./domain/formatacao";
 import { gerarRelatorio } from "./domain/relatorio";
@@ -80,32 +81,13 @@ function relatorioDoResultado(dados: DadosAvaliacao, resultado: ResultadoAvaliac
 
 /* ─── Tela de Acesso ─── */
 
-function GoogleLoginButton({ onAutenticado }: { onAutenticado: (usuario: Usuario) => void }) {
+function GoogleLoginButton() {
   const login = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      // Busca os dados do usuário no Google
-      const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-      });
-      const perfil = await res.json();
-
-      // Busca ou cadastra o usuário localmente
-      let usuario = buscarUsuarioPorEmail(perfil.email);
-      if (!usuario) {
-        usuario = cadastrarUsuario({
-          nome: perfil.name,
-          email: perfil.email,
-          celular: "",
-        });
-      }
-
-      definirSessao(usuario);
-      onAutenticado(usuario);
-    },
-    onError: () => console.error("Login com Google falhou"),
+    onSuccess: (tokenResponse: any) => console.log(tokenResponse),
+    onError: () => console.log("Login Failed"),
   });
 
-return (
+  return (
     <button
       className="flex w-fit items-center gap-3 border border-[#aeb4ba] bg-white px-6 py-3 text-sm font-bold uppercase tracking-wide text-[#333333]"
       type="button"
@@ -181,21 +163,27 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
         <aside className="border-b border-[#c8ccd0] bg-white p-6 md:border-b-0 md:border-r md:p-8">
           <p className="text-xs font-bold uppercase tracking-wide text-[#e06600] md:text-sm">SISTEMA TÉCNICO</p>
-          <h1 className="mt-2 text-xl font-bold leading-tight text-[#0f2d4d] md:mt-6 md:text-3xl">Avaliação Imobiliária</h1>
+          <h1 className="mt-2 text-xl font-bold leading-tight text-[#0f2d4d] md:mt-6 md:text-3xl">Avaliação de imóveis</h1>
           <nav className="mt-4 flex gap-4 text-xs font-bold uppercase tracking-wide text-[#e06600] md:mt-10 md:flex-col md:gap-5 md:text-sm">
             <p>HISTÓRICO ISOLADO</p>
             <p>PDF E WORD</p>
           </nav>
+
+          {/* Espaço de banner publicitário — futuro */}
+          <BannerPublicitario />
         </aside>
         <main className="px-6 py-10 md:px-14 lg:px-20">
           <div className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">ACESSO DO USUÁRIO</p>
-            <h2 className="mt-3 text-4xl font-bold leading-tight text-[#0f2d4d]">AVALIA LAUDO MASTER</h2>
+            <h2 className="mt-3 text-4xl font-bold leading-tight text-[#0f2d4d]">CALCULADORA LAUDO MASTER</h2>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-[#333333]">
-              Ambiente GRATUITO E SEGURO replicando o rigor da NBR 14653 com tratamento por fatores e Chauvenet, em uma interface limpa, sem anúncios externos.
+              Ferramenta para Avaliação de Imóveis de acordo com a NBR 14653 da ABNT.
             </p>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-[#333333]">
-              Somos referência em avaliação imobiliária há anos. Alunos e profissionais confiam nos nossos critérios técnicos.
+            <p className="mt-2 max-w-2xl text-lg leading-8 text-[#333333]">
+              Método Comparativo por Fatores, com saneamento pelo Critério de Chauvenet.
+            </p>
+            <p className="mt-2 max-w-2xl text-lg leading-8 text-[#333333]">
+              O seu uso só é recomendado para profissionais qualificados na utilização deste método.
             </p>
 
             <div className="mt-10 border-t border-[#c8ccd0] pt-8">
@@ -231,7 +219,7 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
                 <button className="w-fit border border-[#e06600] bg-[#e06600] px-6 py-3 text-sm font-bold uppercase tracking-wide text-white" type="submit">
                   {modo === "cadastro" ? "CRIAR E ENTRAR" : "ENTRAR NO SISTEMA"}
                 </button>
-                <GoogleLoginButton onAutenticado={onAutenticado} />
+                <GoogleLoginButton />
               </form>
 
               <p className="mt-8 max-w-xl text-sm leading-6 text-[#7a7f87]">
@@ -473,7 +461,7 @@ function App() {
   }
 
   function baixarPdfAtual() {
-    if (relatorioAtual) exportarPdf(relatorioAtual);
+    if (relatorioAtual) void exportarPdf(relatorioAtual);
   }
 
   function baixarWordAtual() {
@@ -482,7 +470,7 @@ function App() {
 
   function exportarItemHistorico(item: HistoricoItem, tipo: "pdf" | "word") {
     const relatorio = relatorioDoResultado(item.dadosEntrada, item.resultadosCalculados, usuarioAtivo);
-    if (tipo === "pdf") exportarPdf(relatorio);
+    if (tipo === "pdf") void exportarPdf(relatorio);
     if (tipo === "word") void exportarWord(relatorio);
   }
 
@@ -493,9 +481,9 @@ function App() {
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
         {/* Sidebar */}
         <aside className="border-r border-[#c8ccd0] bg-white p-8">
-          <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">LAUDO IMOBILIÁRIO</p>
-          <h1 className="mt-5 text-3xl font-bold leading-tight text-[#0f2d4d]">Avaliação Técnica</h1>
-          <p className="mt-4 text-sm leading-6 text-[#333333]">Método comparativo direto com tratamento por fatores, histórico local e exportação profissional.</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-[#e06600]">LAUDO MASTER</p>
+          <h1 className="mt-5 text-3xl font-bold leading-tight text-[#0f2d4d]">Calculadora Laudo Master</h1>
+          <p className="mt-4 text-sm leading-6 text-[#333333]">Avaliação por método comparativo direto com tratamento por fatores conforme NBR 14653, histórico local e exportação profissional.</p>
           <nav className="mt-10 grid gap-5 text-left text-sm font-bold uppercase tracking-wide">
             {menu.map((item) => (
               <button className={aba === item.id ? "text-left text-[#e06600]" : "text-left text-[#333333]"} key={item.id} type="button" onClick={() => setAba(item.id)}>
