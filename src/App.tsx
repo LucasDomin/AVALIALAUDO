@@ -1,8 +1,9 @@
-import { type ChangeEvent, type FormEvent, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { BannerPublicitario } from "./components/BannerPublicitario";
 import { calcularAvaliacao, type ComparativoInput, type DadosAvaliacao, type FatorDefinicao, type ResultadoAvaliacao } from "./domain/calculo";
 import { dataHoraBR, moedaBR, numeroBR, somenteDigitos } from "./domain/formatacao";
+import { obterStatusHotmartSends, registrarEventoHotmartSends, reenviarFilaHotmartSends } from "./integrations/hotmartSends";
 import { gerarRelatorio } from "./domain/relatorio";
 import { exportarPdf, exportarWord } from "./services/documentExport";
 import {
@@ -145,6 +146,7 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
         return;
       }
 
+      void registrarEventoHotmartSends({ evento: "login", usuario, consentimento: true });
       entrar(usuario);
       return;
     }
@@ -155,6 +157,7 @@ function AcessoInicial({ onAutenticado }: { onAutenticado: (usuario: Usuario) =>
     }
 
     const usuario = cadastrarUsuario({ nome: nome.trim(), email: email.trim(), celular: celular.trim() });
+    void registrarEventoHotmartSends({ evento: "cadastro", usuario, consentimento: true });
     entrar(usuario);
   }
 
@@ -349,11 +352,16 @@ function App() {
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [historico, setHistorico] = useState<HistoricoItem[]>(() => (usuario ? obterHistorico(usuario.id) : []));
+  const [hotmartStatus, setHotmartStatus] = useState(() => obterStatusHotmartSends());
 
   const relatorioAtual = useMemo(() => {
     if (!usuario || !resultado) return null;
     return relatorioDoResultado(formulario, resultado, usuario);
   }, [formulario, resultado, usuario]);
+
+  useEffect(() => {
+    setHotmartStatus(obterStatusHotmartSends());
+  }, [usuario]);
 
   if (!usuario) {
     return (
@@ -446,6 +454,17 @@ function App() {
       const atualizado = salvarNoHistorico(usuarioAtivo.id, formulario, calculado);
       setHistorico(atualizado);
       setMensagem("CÁLCULO REALIZADO E SALVO NO HISTÓRICO LOCAL.");
+      void registrarEventoHotmartSends({
+        evento: "calculo_realizado",
+        usuario: usuarioAtivo,
+        consentimento: true,
+        metadados: {
+          valor_final: calculado.valorFinal,
+          valor_unitario: calculado.valorUnitarioAdotado,
+          area: formulario.avaliando.area,
+          amostras: calculado.estatisticaInicial.n,
+        },
+      }).then(() => setHotmartStatus(obterStatusHotmartSends()));
     } catch (error) {
       setResultado(null);
       setErro(error instanceof Error ? error.message : "Não foi possível calcular a avaliação.");
@@ -461,17 +480,36 @@ function App() {
   }
 
   function baixarPdfAtual() {
-    if (relatorioAtual) void exportarPdf(relatorioAtual);
+    if (relatorioAtual) {
+      void exportarPdf(relatorioAtual);
+      void registrarEventoHotmartSends({ evento: "exportacao_pdf", usuario: usuarioAtivo, consentimento: true }).then(() => setHotmartStatus(obterStatusHotmartSends()));
+    }
   }
 
   function baixarWordAtual() {
-    if (relatorioAtual) void exportarWord(relatorioAtual);
+    if (relatorioAtual) {
+      void exportarWord(relatorioAtual);
+      void registrarEventoHotmartSends({ evento: "exportacao_word", usuario: usuarioAtivo, consentimento: true }).then(() => setHotmartStatus(obterStatusHotmartSends()));
+    }
   }
 
   function exportarItemHistorico(item: HistoricoItem, tipo: "pdf" | "word") {
     const relatorio = relatorioDoResultado(item.dadosEntrada, item.resultadosCalculados, usuarioAtivo);
-    if (tipo === "pdf") void exportarPdf(relatorio);
-    if (tipo === "word") void exportarWord(relatorio);
+    if (tipo === "pdf") {
+      void exportarPdf(relatorio);
+      void registrarEventoHotmartSends({ evento: "exportacao_pdf", usuario: usuarioAtivo, consentimento: true }).then(() => setHotmartStatus(obterStatusHotmartSends()));
+    }
+    if (tipo === "word") {
+      void exportarWord(relatorio);
+      void registrarEventoHotmartSends({ evento: "exportacao_word", usuario: usuarioAtivo, consentimento: true }).then(() => setHotmartStatus(obterStatusHotmartSends()));
+    }
+  }
+
+  function tentarReenviarHotmartSends() {
+    void reenviarFilaHotmartSends().then((retorno) => {
+      setHotmartStatus(obterStatusHotmartSends());
+      setMensagem(retorno.mensagem.toUpperCase());
+    });
   }
 
   /* ─── Render ─── */
@@ -703,8 +741,19 @@ function App() {
                 <LinhaResumo rotulo="Cadastro" valor={dataHoraBR(usuario.criadoEm)} />
                 <LinhaResumo rotulo="Histórico" valor={`${historico.length} cálculo(s) salvos, limite operacional de 3`} />
                 <LinhaResumo rotulo="OAuth Google" valor="Fluxo preparado no código, sem conexão externa ativa nesta versão" />
-                <LinhaResumo rotulo="Coleta Hotmart Sends" valor="Estrutura preparada no código, sem disparo externo ativo nesta versão" />
+                <LinhaResumo
+                  rotulo="Coleta Hotmart Sends"
+                  valor={hotmartStatus.configurado ? "Configurada para envio automático de cadastro, cálculo e exportações" : "Não configurada. Os eventos ficam preservados em fila local até o endpoint ser informado"}
+                />
+                <LinhaResumo rotulo="Fila Hotmart Sends" valor={`${hotmartStatus.filaPendente} evento(s) pendente(s)`} />
+                <LinhaResumo rotulo="Último envio" valor={hotmartStatus.ultimoEnvioEm ? dataHoraBR(hotmartStatus.ultimoEnvioEm) : "Ainda sem envio confirmado neste navegador"} />
+                {hotmartStatus.ultimoErro && <LinhaResumo rotulo="Último erro" valor={hotmartStatus.ultimoErro} />}
               </dl>
+              {hotmartStatus.filaPendente > 0 && (
+                <button className="mt-6 border border-[#e06600] px-6 py-3 text-sm font-bold uppercase tracking-wide text-[#e06600]" type="button" onClick={tentarReenviarHotmartSends}>
+                  REENVIAR FILA HOTMART SENDS
+                </button>
+              )}
             </section>
           )}
         </main>

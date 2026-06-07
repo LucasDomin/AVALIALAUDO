@@ -1,41 +1,31 @@
+import { BannerCursoLaudoMasterSvg } from "./BannerCursoLaudoMaster";
+
 /**
  * Banner publicitário lateral — exibido apenas na tela de Login (Acesso Inicial).
  *
- * Para alterar o banner no futuro:
- *  - Substitua os valores em BANNER_CONFIG abaixo.
- *  - imagemUrl: caminho da imagem do banner (pode ser PNG/JPG/SVG; deixe vazio para usar o conteúdo textual padrão).
- *  - linkDestino: URL para a qual o usuário será direcionado ao clicar.
- *  - tituloAcessivel: texto alternativo para acessibilidade e SEO.
+ * 📐 ESPAÇO DISPONÍVEL (DESKTOP)
+ *  - Largura total da sidebar:    280 px
+ *  - Padding lateral:             32 px (esquerda) + 32 px (direita)
+ *  - Largura útil da imagem:      216 px
+ *  - Altura recomendada:          até 520 px (proporção atual do banner ativo)
+ *  - Proporções sugeridas:        1:1 (quadrado), 2:3 (retrato) ou 27:65 (alto/banner lateral)
+ *  - Formato preferencial:        SVG (preferido — renderizado inline), PNG ou JPG (até ~150 KB)
+ *
+ * 🔁 Para alterar o banner no futuro:
+ *  - Substitua o conteúdo de `BannerCursoLaudoMasterSvg` em `./BannerCursoLaudoMaster.tsx`
+ *    (ou crie um novo componente SVG e troque o import aqui).
+ *  - Ajuste `linkDestino` para alterar o destino do clique.
+ *  - Ajuste `tituloAcessivel` para acessibilidade e SEO.
  */
 
 const BANNER_CONFIG = {
   ativo: true,
-  imagemUrl: "", // ex: "/banners/curso-laudo-master.png"
-  linkDestino: "#", // ex: "https://laudomaster.com.br/curso"
-  tituloAcessivel: "Espaço publicitário Laudo Master",
-  textoChamada: "ESPAÇO PUBLICITÁRIO",
-  textoSecundario: "Em breve, novidades exclusivas para profissionais Laudo Master.",
+  linkDestino: "https://laudomaster.com.br/cursos/",
+  tituloAcessivel: "Conheça os cursos da Laudo Master",
 };
 
 export function BannerPublicitario() {
   if (!BANNER_CONFIG.ativo) return null;
-
-  const conteudo = BANNER_CONFIG.imagemUrl ? (
-    <img
-      src={BANNER_CONFIG.imagemUrl}
-      alt={BANNER_CONFIG.tituloAcessivel}
-      className="block w-full"
-    />
-  ) : (
-    <div className="flex flex-col items-start gap-2 border border-dashed border-[#aeb4ba] bg-[#f6f7f9] p-4">
-      <span className="text-xs font-bold uppercase tracking-wide text-[#e06600]">
-        {BANNER_CONFIG.textoChamada}
-      </span>
-      <span className="text-sm leading-5 text-[#333333]">
-        {BANNER_CONFIG.textoSecundario}
-      </span>
-    </div>
-  );
 
   return (
     <div className="mt-8 hidden border-t border-[#c8ccd0] pt-6 md:block">
@@ -49,7 +39,7 @@ export function BannerPublicitario() {
         title={BANNER_CONFIG.tituloAcessivel}
         className="block"
       >
-        {conteudo}
+        <BannerCursoLaudoMasterSvg className="block h-auto w-full" />
       </a>
     </div>
   );
